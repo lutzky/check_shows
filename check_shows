@@ -1,0 +1,51 @@
+#!/usr/bin/python
+
+import pynotify
+import glob
+import os.path
+import time
+import sys
+
+inbox_dir = os.path.expanduser("~/torrents/inbox")
+
+pynotify.init("check_shows")
+
+#############################################################################
+
+def ellipsis(s, count = 28):
+    if len(s) > count - 3:
+        return "%s..." % s[0:count - 3]
+    else:
+        return s
+
+inbox_files = os.listdir(inbox_dir)
+
+inbox_files.sort(key = lambda x: -os.stat(os.path.join(inbox_dir,x)).st_ctime)
+inbox_files = inbox_files[0:8]
+inbox_files = map(ellipsis, inbox_files)
+
+if inbox_files:
+    n = pynotify.Notification("Torrents await", "\n".join(inbox_files), "emblem-downloads")
+    n.show()
+
+try:
+    from pyinotify import WatchManager, Notifier, ProcessEvent, EventsCodes
+
+    class PClose(ProcessEvent):
+        def process_default(self, event):
+            n = pynotify.Notification("Torrents await",
+                    os.path.basename(event.name),
+                    "emblem-downloads")
+            n.set_hint_string("append", "allowed")
+            n.show()
+
+    wm = WatchManager()
+    notifier = Notifier(wm, PClose())
+    wm.add_watch(inbox_dir, EventsCodes.IN_CREATE | EventsCodes.IN_MOVED_TO)
+
+    while 1:
+        notifier.process_events()
+        if notifier.check_events():
+            notifier.read_events()
+except ImportError, e:
+    pass
