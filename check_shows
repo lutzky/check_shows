@@ -12,21 +12,32 @@ pynotify.init("check_shows")
 
 #############################################################################
 
-def ellipsis(s, count = 28):
-    if len(s) > count - 3:
-        return "%s..." % s[0:count - 3]
-    else:
-        return s
-
 inbox_files = os.listdir(inbox_dir)
 
-inbox_files.sort(key = lambda x: -os.stat(os.path.join(inbox_dir,x)).st_ctime)
-inbox_files = inbox_files[0:8]
-inbox_files = map(ellipsis, inbox_files)
+stamp_path = os.path.join(inbox_dir, ".stamp")
+
+def update_stamp():
+    stamp_file = file(stamp_path, "a")
+    stamp_file.close()
+    os.utime(stamp_path, None)
+
+if ".stamp" in inbox_files:
+    last_check = os.stat(stamp_path).st_mtime
+    inbox_files.remove(".stamp")
+else:
+    last_check = 0
+
+update_stamp()
+
+inbox_files.sort(key = lambda x: -os.stat(os.path.join(inbox_dir,x)).st_mtime)
+inbox_files = [ f for f in inbox_files
+                if os.stat(os.path.join(inbox_dir, f)).st_mtime > last_check ]
 
 if inbox_files:
-    n = pynotify.Notification("Torrents await", "\n".join(inbox_files), "emblem-downloads")
-    n.show()
+    for f in inbox_files:
+        n = pynotify.Notification("Torrents await", f, "emblem-downloads")
+        n.set_hint_string("append", "allowed")
+        n.show()
 
 try:
     from pyinotify import WatchManager, Notifier, ProcessEvent, EventsCodes
