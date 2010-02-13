@@ -30,6 +30,7 @@ if inbox_files:
 
 try:
     from pyinotify import WatchManager, Notifier, ProcessEvent, EventsCodes
+    import pyinotify
 
     class PClose(ProcessEvent):
         def process_default(self, event):
@@ -38,10 +39,11 @@ try:
                     "emblem-downloads")
             n.set_hint_string("append", "allowed")
             n.show()
+            update_stamp()
 
     wm = WatchManager()
     notifier = Notifier(wm, PClose())
-    wm.add_watch(inbox_dir, EventsCodes.IN_CREATE | EventsCodes.IN_MOVED_TO)
+    wm.add_watch(inbox_dir, pyinotify.IN_CREATE | pyinotify.IN_MOVED_TO)
 
     while 1:
         notifier.process_events()
